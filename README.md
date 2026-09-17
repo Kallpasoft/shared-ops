@@ -19,6 +19,7 @@ demás. Regla de dos de `/02-code/CLAUDE.md`: a la segunda vez se extrae, no se 
 | `sql.sh` | Correr un `.sql` contra staging/prod leyendo `DATABASE_URL_DIRECT` del `.env` del entorno, mostrando solo el host y exigiendo teclear `PROD` | ferreteria-system (`services/facturacion/scripts/sql.sh`), base de 20 scripts de facturación | foody leía el secret con boto3 en cada script; auto pegaba la URL a mano |
 | `setup-github-env.sh` | Sembrar y auditar Variables/Secrets de un GitHub Environment desde un manifiesto versionado, con diff, detección de drift contra los workflows y resolución de outputs de CloudFormation y certs ACM | ferreteria-system | auto y central tenían un script imperativo con los valores hardcodeados y sin diff |
 | `check_migrations.py` | Detectar multi-head, id duplicado, padre fantasma, huérfana y raíz extra en Alembic, con AST y solo stdlib, en segundos y antes de instalar dependencias | foody | los demás solo veían el multi-head, y después de `pip install` |
+| `bitacora.py` | Qué se hizo cada día (PRs mergeados, issues cerrados, tags desplegados) y qué quedó para revisar, agrupado por día **calendario de Lima** | nuevo, 2026-09-17 | no existía: GitHub no agrupa por día y en plan Free los Insights no guardan histórico |
 
 ## Uso en CI
 
@@ -48,6 +49,8 @@ aquí. Ejemplos:
 sql.sh prod scripts/sql/fix.sql            # ENV_DIR=./backend, SQL_DIR=./scripts/sql
 setup-github-env.sh staging                # dry-run contra infra/environments/staging.json
 setup-github-env.sh prod --apply
+bitacora.py Kallpasoft/foody --dias 7      # markdown a stdout
+bitacora.py Kallpasoft/{ferreteria-system,foody} --dias 1   # consolidado de varios repos
 python3 check_migrations.py backend/migrations/versions --nuevo
 ```
 
