@@ -20,6 +20,42 @@ demás. Regla de dos de `/02-code/CLAUDE.md`: a la segunda vez se extrae, no se 
 | `setup-github-env.sh` | Sembrar y auditar Variables/Secrets de un GitHub Environment desde un manifiesto versionado, con diff, detección de drift contra los workflows y resolución de outputs de CloudFormation y certs ACM | ferreteria-system | auto y central tenían un script imperativo con los valores hardcodeados y sin diff |
 | `check_migrations.py` | Detectar multi-head, id duplicado, padre fantasma, huérfana y raíz extra en Alembic, con AST y solo stdlib, en segundos y antes de instalar dependencias | foody | los demás solo veían el multi-head, y después de `pip install` |
 
+## Novedades en v0.2.0 (sin publicar)
+
+| Script | Resuelve | Origen |
+|---|---|---|
+| `deploy-role.sh` | Rol OIDC de deploy bajo control de versiones: diff de la política inline y de la trust policy contra AWS, y creación del rol si falta (#2) | auto-system (`infra/scripts/deploy-role.sh`); segundo uso: kallpy |
+| `secret-patch.sh` | Fusionar claves en un secret de Secrets Manager sin pisar el resto, sin imprimir valores (#3) | ferreteria-system (`update-cookie-secret.sh`); segundo uso: foody |
+
+```bash
+deploy-role.sh --rol <rol> --policy-file infra/policies/deploy-role.json \
+  [--policy-name cdk-deploy] [--repo <owner/name> --environments <a,b>] [--region R] [--profile P] [--apply]
+secret-patch.sh <secret-id> --from-file <patch.json> [--region R] [--profile P] [--create] [--apply] [--overwrite]
+```
+
+Los dos son **dry-run por defecto** y salen con **0** (en sincronía / aplicado), **2** (hay diferencias
+o conflictos pendientes) o **1** (error).
+
+- `deploy-role.sh`: `put-role-policy` reemplaza la política entera, así que el diff (claves y arrays
+  normalizados) muestra como eliminación cualquier permiso agregado a mano. Con `--repo` + `--environments`
+  también verifica la trust policy (`aud`, `repository_id`, `repository_owner_id` leídos con `gh api`, y un
+  `sub` `repo:<owner/name>:environment:<env>` por environment) y con `--apply` crea o corrige el rol. El OIDC
+  provider no se crea: si falta, falla. La última línea de stdout es el ARN del rol.
+- `secret-patch.sh`: el patch es un objeto JSON plano de strings. Por defecto solo agrega claves nuevas; una
+  clave con valor distinto es **conflicto** y no se toca salvo `--overwrite`. Solo imprime nombres de clave
+  (`nueva`, `igual`, `conflicto`, `se sobrescribe`), nunca valores. `--create` permite crear el secret.
+
+Wrapper de cinco líneas en cada producto (ruta que sus docs ya citan, p. ej. `infra/scripts/deploy-role.sh`):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+SHARED_OPS="${SHARED_OPS:-$HOME/kallpasoft/02-code/shared-components/ops}"
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+exec "$SHARED_OPS/deploy-role.sh" --rol <rol> --policy-file "$RAIZ/infra/policies/deploy-role.json" \
+  --repo <owner/name> --environments <staging,production> "$@"
+```
+
 ## Uso en CI
 
 ```yaml
@@ -60,6 +96,7 @@ Variables: `verificar-origen-deploy.sh` acepta `RAMA_PRINCIPAL`, `PATRON_TAG`, `
 ```bash
 python3 tests/test_check_migrations.py
 bash tests/test_verificar_origen.sh
+bash tests/test_deploy_role_secret_patch.sh   # aws/gh falsos en el PATH, sin AWS real
 ```
 
 ## Publicar una versión
