@@ -39,7 +39,7 @@ o conflictos pendientes) o **1** (error).
 - `deploy-role.sh`: `put-role-policy` reemplaza la política entera, así que el diff (claves y arrays
   normalizados) muestra como eliminación cualquier permiso agregado a mano. Con `--repo` + `--environments`
   también verifica la trust policy (`aud`, `repository_id`, `repository_owner_id` leídos con `gh api`, y un
-  `sub` `repo:<owner/name>:environment:<env>` por environment) y con `--apply` crea o corrige el rol. El OIDC
+  `sub` `repo:*:environment:<env>` por environment: con el *immutable subject* de GitHub el `sub` trae `owner@id/repo@id`, así que el repo lo atan `repository_id` y `repository_owner_id`) y con `--apply` crea o corrige el rol. El OIDC
   provider no se crea: si falta, falla. La última línea de stdout es el ARN del rol.
 - `secret-patch.sh`: el patch es un objeto JSON plano de strings. Por defecto solo agrega claves nuevas; una
   clave con valor distinto es **conflicto** y no se toca salvo `--overwrite`. Solo imprime nombres de clave

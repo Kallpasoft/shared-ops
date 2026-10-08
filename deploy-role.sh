@@ -11,7 +11,7 @@
 #   --policy-file <ruta>      política inline deseada, JSON (obligatorio)
 #   --policy-name <nombre>    nombre de la política inline (default: cdk-deploy)
 #   --repo <owner/name>       con --environments, construye y verifica la trust policy
-#   --environments <a,b>      environments de GitHub autorizados (sub = repo:R:environment:E)
+#   --environments <a,b>      environments de GitHub autorizados (sub = repo:*:environment:E; el repo lo atan repository_id/owner_id)
 #   --region <r> --profile <p>  se pasan tal cual al aws cli
 #   --apply                   escribe (crea el rol si falta, actualiza trust e inline)
 #
@@ -100,7 +100,7 @@ if [ -n "$REPO" ]; then
         Condition: {
           StringEquals: { ($h+":aud"): "sts.amazonaws.com",
                           ($h+":repository_id"): $rid, ($h+":repository_owner_id"): $oid },
-          StringLike: { ($h+":sub"): [ $envs | split(",")[] | "repo:\($repo):environment:\(.)" ] } } }] }' \
+          StringLike: { ($h+":sub"): [ $envs | split(",")[] | "repo:*:environment:\(.)" ] } } }] }' \
     > "$TMP/trust.json"
   if [ "$EXISTE" -eq 1 ]; then
     jq '.Role.AssumeRolePolicyDocument' "$TMP/role.json" | norm > "$TMP/trust_viva"
