@@ -56,6 +56,42 @@ exec "$SHARED_OPS/deploy-role.sh" --rol <rol> --policy-file "$RAIZ/infra/policie
   --repo <owner/name> --environments <staging,production> "$@"
 ```
 
+## Auditoría SEO on-page: `seo-auditoria.mjs`
+
+Recorre todas las URLs del sitemap de un sitio y revisa lo que se puede ver en el HTML servido,
+sin Search Console. Nació en la auditoría de kallpasoft.com del 2026-11-19 y sirve igual para
+reparatego.com o la landing de cualquier producto. Node ≥ 18, sin dependencias.
+
+```bash
+node seo-auditoria.mjs https://kallpasoft.com --out /tmp/seo-kallpasoft
+```
+
+Escribe `resultado.json` (problemas agrupados por tipo, con la URL de ejemplo) y `paginas.json`
+(los datos de cada URL). Sale con **0** si no hay problemas, **2** si los hay y **1** si hay un error.
+
+| Tipo | Qué marca |
+|---|---|
+| `sitemap_no_200` | URL del sitemap que no responde 200 |
+| `noindex_meta` · `noindex_header` | `noindex` en el `<meta robots>` o en `X-Robots-Tag` |
+| `canonical_cantidad` · `canonical_no_propia` | Más o menos de una canónica, o una canónica que apunta a otra URL |
+| `title_cantidad` · `title_largo` · `title_duplicado` | Título repetido, ausente o fuera de 25–65 caracteres |
+| `desc_falta` · `desc_largo` · `desc_duplicada` | Meta description ausente, repetida o fuera de 70–160 caracteres |
+| `h1_cantidad` | Página sin H1 o con más de uno |
+| `img_sin_alt` | `<img>` sin atributo `alt`. Un `alt=""` es válido: marca una imagen decorativa |
+| `jsonld_falta` · `jsonld_invalido` · `articulo_sin_autor` | Página sin JSON-LD, JSON-LD que no parsea, o `Article` sin `author` |
+| `contenido_corto` | Menos de 300 palabras sin contar cabecera, pie ni menú. Un índice o un listado puede quedar aquí sin ser un problema |
+| `url_sucia` | Mayúsculas, guion bajo, caracteres no ASCII o query string en la URL |
+| `enlace_roto` · `enlace_a_redireccion` · `enlace_cadena` · `redireccion_temporal` | Enlaces internos a un 4xx/5xx, a una redirección, a una cadena de redirecciones o a un 302/307 |
+| `huerfana` | URL del sitemap a la que no enlaza ninguna otra página |
+| `host_cadena` | `http://`, `www` o `http://www` que no llegan al sitio en un solo 301/308 |
+
+`resultado.json` también trae `menos_enlazadas`, las 12 URLs con menos enlaces entrantes, que sirve
+para el punto «enlaza lo que vende». Además indica si `robots.txt` bloquea a los bots de IA
+(GPTBot, OAI-SearchBot, PerplexityBot, Google-Extended…) y si hay un `llms.txt`.
+
+Lo que **no** cubre: velocidad (Lighthouse), indexación, CTR y canibalización (Search Console),
+backlinks ni el HTML renderizado por JavaScript.
+
 ## Uso en CI
 
 ```yaml
@@ -97,6 +133,7 @@ Variables: `verificar-origen-deploy.sh` acepta `RAMA_PRINCIPAL`, `PATRON_TAG`, `
 python3 tests/test_check_migrations.py
 bash tests/test_verificar_origen.sh
 bash tests/test_deploy_role_secret_patch.sh   # aws/gh falsos en el PATH, sin AWS real
+node tests/test_seo_auditoria.mjs             # sitio de ejemplo en localhost
 ```
 
 ## Publicar una versión
